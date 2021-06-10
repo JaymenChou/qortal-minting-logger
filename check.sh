@@ -128,36 +128,7 @@ rotate () {
   return $?
 }
 
-orphan() {
-	# Check to see if height is stuck (ie not adding = 0 delta) and if it has been stuck for 5
-	# consecutive checks, orphan TOORPHAN number of blocks
-	# The command to orphan is curl -X POST "http://localhost:12391/admin/orphan" -H "accept: text/plain" -H "Content-Type: text/plain" -d "343114" # where you replace 343114 with the actual height you want to orphan to
-	ORPHANLIMIT=$(tail -n$ORPHANREST $FILE | awk -F ' ' {'print $2'} | wc -l)
-	LAST=$(tail -n$ORPHANREST $FILE | awk -F ' ' {'print $2'})
-	FIVELAST=$(tail -n5 $FILE | awk -F ' ' {'print $2'})
-	FIRST=$(echo $FIVELAST | awk -F ' ' {'print $1'})
-	FIFTH=$(echo $FIVELAST | awk -F ' ' {'print $5'})
-	
-	# If we recently orphaned, then do nothing (limit ORPHANREST above)
-	[[ "orphaning" == *"$LAST"* ]] && return 10
-	# If we recently rotated log file, we need to wait for enough data so do not orphan
-	[[ $ORPHANLIMIT -le $ORPHANREST ]] && return 11
 
-	# If we need to orphan, after the orphan command returns we echo time, IF this time is immediate, then we know that the orphan returned FALSE and di not start at all
-	if [ $FIFTH == $FIRST ]; then
-		TARGET=$(($FIRST-$TOORPHAN))
-		ORPHANTIME=$(date +"%H:%M")
-		ORPHANEDTIME=$ORPHANTIME
-		echo "# $ORPHANTIME orphaning to $TARGET" >> $FILE
-		while [ ! $ORPHANTIME == $ORPHANEDTIME ]; do
-			curl -X POST "http://localhost:12391/admin/orphan" -H "accept: text/plain" -H "Content-Type: text/plain" -d "$TARGET"
-			$ORPHANEDTIME=$(date +"%H:%M")
-			sleep 2
-		done
-		echo "# $ORPHANEDTIME orphaning to $TARGET" finished >> $FILE
-	fi
-# No need to corerestart after orphaning
-}
 
 mintstatus() {
 	MINTED=$(curl -s -q "http://127.0.0.1:12391/addresses/$MYKEY" | awk -F ':' {'print $8'} | awk -F ',' {'print $1'})
